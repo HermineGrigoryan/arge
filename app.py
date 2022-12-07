@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import pandas as pd
 
-import utils
+import functions
 
 st.set_page_config(layout="wide")
 
@@ -70,7 +70,7 @@ if password == "aua_arge":
         ['arge_group', 'category', 'brand'])
         n_obs = col3_bar.slider('Number of items to show', 5, 25, 10, 5)
         agg_func_bar = col4_bar.selectbox('Aggregation function', ['sum', 'mean'])
-        st.plotly_chart(utils.top_barplot(data, x_var_bar, 'item_name', grouping_var_bar, n_obs, agg_func_bar), use_container_width=True) 
+        st.plotly_chart(functions.top_barplot(data, x_var_bar, 'item_name', grouping_var_bar, n_obs, agg_func_bar), use_container_width=True) 
 
 
         # Time series plot
@@ -78,7 +78,7 @@ if password == "aua_arge":
         grouping_var_ts = col1_ts.selectbox('Grouping variable (time series)', 
         ['arge_group', 'category', 'brand'])
         agg_func_ts = col2_ts.selectbox('Aggregation function (time series)', ['sum', 'mean'])
-        st.plotly_chart(utils.time_series_plot(data, grouping_var_ts, agg_func_ts), use_container_width=True) 
+        st.plotly_chart(functions.time_series_plot(data, grouping_var_ts, agg_func_ts), use_container_width=True) 
 
 
     if navigation == 'Models':
@@ -96,19 +96,19 @@ if password == "aua_arge":
         st.markdown('_'*100) # adding a breaking line
         st.header('Moving Average Model')
         ma_period = st.selectbox('MA period (month)', [2, 3, 4, 5, 6])
-        ma_pred = utils.ma_modeling(model_df, ma_period)
+        ma_pred = functions.ma_modeling(model_df, ma_period)
         # st.write(ma_pred)
         st.write(f'{ma_period}-month Moving Average for {selected_group_model}')
-        st.plotly_chart(utils.pred_vs_actual_plot(ma_pred), use_container_width=True)
+        st.plotly_chart(functions.pred_vs_actual_plot(ma_pred), use_container_width=True)
         st.write('Accuracy metrics')
-        st.dataframe(pd.DataFrame(utils.accuracy_metrics(ma_pred)))
+        st.dataframe(pd.DataFrame(functions.accuracy_metrics(ma_pred)))
         
 
         st.markdown('_'*100) # adding a breaking line
         st.header('Linear Regression Model')
-        lr_pred = utils.lr_modeling(model_df)
+        lr_pred = functions.lr_modeling(model_df)
         # st.write(lr_pred)
         st.write(f"Linear Regression Model with `month`, `year`, `quarter` and `sales from the previous year's the same month` as independent variables.")
-        st.plotly_chart(utils.pred_vs_actual_plot(lr_pred), use_container_width=True)
+        st.plotly_chart(functions.pred_vs_actual_plot(lr_pred), use_container_width=True)
         st.write('Accuracy metrics')
-        st.dataframe(pd.DataFrame(utils.accuracy_metrics(lr_pred)))
+        st.dataframe(pd.DataFrame(functions.accuracy_metrics(lr_pred)))
