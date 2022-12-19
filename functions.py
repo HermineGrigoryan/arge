@@ -1,6 +1,3 @@
-# It is a good practice to create functions in a separate .py file and 
-# import it in the main 'app' file when your code gets big. 
-
 import streamlit as st
 import numpy as np
 
@@ -17,7 +14,8 @@ def top_barplot(data, x, y, col, n_obs, agg_func):
     fig = px.bar(grouped_df.sort_values(x, ascending=False).iloc[:n_obs].sort_values(x),
      x = x, y = y, color = col)
     fig.update_layout(xaxis={'categoryorder':'total descending'},
-    title = f'Top {n_obs} items with the highest {x} by {agg_func}')
+    title = f'Top {n_obs} items with the highest {x} by {agg_func}', yaxis_title = "")
+    fig.update_yaxes(automargin=True)
     return fig
 
 def time_series_plot(data, grouping_var, agg_func):
@@ -52,6 +50,13 @@ def ma_modeling(model_df, ma_period):
     return ma_pred
 
 
+def wma_modeling(model_df, wma_period, weights):
+    model_df['predicted'] = model_df['sales'].rolling(wma_period).apply(lambda x: np.sum(weights*x))
+    wma_pred = model_df.rename(columns={'sales': 'actual'})
+
+    return wma_pred
+
+
 def lr_modeling(model_df):
     model_df['lag_sales'] = model_df['sales'].shift(12)
     model_df['year'] = model_df['date'].dt.year
@@ -67,12 +72,17 @@ def lr_modeling(model_df):
     lr_pred = model_df.rename(columns={'sales': 'actual'})
     return lr_pred
 
+def exp_smoothing_model(model_df, alpha):
+    model_df['predicted'] = model_df['sales'].ewm(alpha=alpha).mean()
+    exp_smoothing_pred = model_df.rename(columns={'sales': 'actual'})
 
+    return exp_smoothing_pred
 
 def pred_vs_actual_plot(pred_df):
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=pred_df['date'], y=pred_df['predicted'], name=f'Predicted sales'))
     fig.add_trace(go.Scatter(x=pred_df['date'], y=pred_df['actual'], name=f'Actual sales'))
+    fig.update_layout(xaxis_title="Date", yaxis_title="Sales")
 
     return fig
     

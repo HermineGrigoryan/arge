@@ -5,7 +5,7 @@ import pandas as pd
 
 import functions
 
-st.set_page_config(layout="wide")
+st.set_page_config(layout="wide", page_title="ARGE-AUA")
 
 st.header('ARGE Business - Time Series Forecasting')
 
@@ -30,8 +30,7 @@ if password == "aua_arge":
 
     if navigation == 'Quantitative Analysis':
         st.subheader('Overall Info on the Data')
-        show_profile = st.checkbox('Show dataset description')
-        if show_profile:
+        with st.expander('Dataset description'):
             '''
             Write here the summary for the project.
             '''
@@ -45,12 +44,12 @@ if password == "aua_arge":
 
         st.markdown('_'*100) # adding a breaking line
         st.subheader('Data Exploration')
-        head_count = st.slider('How many rows of data to show?', 5, 50, 5, 5)
-        which_columns = st.multiselect('Which columns to show?', data.columns.tolist(), data.columns.tolist()[2:7])
-        st.dataframe(data[which_columns].head(head_count))
+        head_count = st.slider('How many random rows of data to show?', 5, 50, 5, 5)
+        which_columns = st.multiselect('Which columns to show?', data.columns.tolist(), ['item_name', 'arge_group', 'category', 'brand', 'sales', 'month', 'year'])
+        st.dataframe(data[which_columns].sample(head_count))
 
         st.markdown('_'*100) # adding a breaking line
-        st.subheader('Summary Statistics per group')
+        st.subheader('Summary Statistics of sales per group')
         col1, col2, col3, col4 = st.columns([1,1,1,2])
         grouping_var1 = col1.selectbox('Grouping variable', ['arge_group', 'category', 'brand'])
         grouping_var2 = col2.selectbox('Grouping period', ['year', 'month'])
@@ -87,28 +86,52 @@ if password == "aua_arge":
         col1_model, col2_model, col3_model = st.columns([1, 1, 1])
         grouping_var_model = col1_model.selectbox('Grouping variable (for models)', 
         ['arge_group', 'category', 'brand'])
-        agg_func_model = col2_model.selectbox('Aggregation function (Moving average)', ['sum', 'mean'])
+        agg_func_model = col2_model.selectbox('Aggregation function (for models)', ['sum', 'mean'])
         group_df = data.groupby([grouping_var_model, 'date'])['sales'].agg(agg_func_model).reset_index()
         selected_group_model = col3_model.selectbox('Selected group', group_df[grouping_var_model].unique().tolist())
         model_df = group_df[group_df[grouping_var_model] == selected_group_model]
-        st.write(model_df)
 
         st.markdown('_'*100) # adding a breaking line
-        st.header('Moving Average Model')
-        ma_period = st.selectbox('MA period (month)', [2, 3, 4, 5, 6])
-        ma_pred = functions.ma_modeling(model_df, ma_period)
-        # st.write(ma_pred)
-        st.write(f'{ma_period}-month Moving Average for {selected_group_model}')
-        st.plotly_chart(functions.pred_vs_actual_plot(ma_pred), use_container_width=True)
-        st.write('Accuracy metrics')
-        st.dataframe(pd.DataFrame(functions.accuracy_metrics(ma_pred)))
+        with st.expander('Moving Average Model'):
+            ma_period = st.selectbox('MA period (month)', [2, 3, 4, 5, 6], index=1)
+            ma_pred = functions.ma_modeling(model_df, ma_period)
+            st.write(f'{ma_period}-month Moving Average for {selected_group_model}')
+            st.plotly_chart(functions.pred_vs_actual_plot(ma_pred), use_container_width=True)
+            st.write('Accuracy metrics')
+            st.dataframe(pd.DataFrame(functions.accuracy_metrics(ma_pred)))
         
+        st.markdown('_'*100) # adding a breaking line
+        with st.expander('Weighted Moving Average Model'):
+            wma_period = st.selectbox('Weighted MA period (month)', [2, 3, 4, 5, 6], index=1)
+            cols = st.columns(wma_period)
+            weights = []
+
+            for ind, col in enumerate(cols):
+                tmp_weight = col.number_input(f'Weight for month {ind+1}', min_value=0.0, max_value=1.0, step=0.1, value=1/wma_period)
+                weights.append(tmp_weight) 
+
+            if round(np.sum(weights), 2) != 1.0:
+                st.warning(f'Please choose weights in a way, such that their sum is equal to 1! (Current sum={round(np.sum(weights), 2)})')
+
+            wma_pred = functions.wma_modeling(model_df, wma_period, weights)
+            st.write(f'{wma_period}-month Weighted Moving Average for {selected_group_model}')
+            st.plotly_chart(functions.pred_vs_actual_plot(wma_pred), use_container_width=True)
+            st.write('Accuracy metrics')
+            st.dataframe(pd.DataFrame(functions.accuracy_metrics(wma_pred)))
+        
+        st.markdown('_'*100) # adding a breaking line
+        with st.expander('Exponential Smoothing Model'):
+            alpha = st.slider('Smoothing term (alpha)', 0.1, 1.0, 0.5)
+            exp_smoothing_pred = functions.exp_smoothing_model(model_df, alpha)
+            st.write(f'Exponential Smoothing (alpha={alpha}) for {selected_group_model}')
+            st.plotly_chart(functions.pred_vs_actual_plot(exp_smoothing_pred), use_container_width=True)
+            st.write('Accuracy metrics')
+            st.dataframe(pd.DataFrame(functions.accuracy_metrics(exp_smoothing_pred)))
 
         st.markdown('_'*100) # adding a breaking line
-        st.header('Linear Regression Model')
-        lr_pred = functions.lr_modeling(model_df)
-        # st.write(lr_pred)
-        st.write(f"Linear Regression Model with `month`, `year`, `quarter` and `sales from the previous year's the same month` as independent variables.")
-        st.plotly_chart(functions.pred_vs_actual_plot(lr_pred), use_container_width=True)
-        st.write('Accuracy metrics')
-        st.dataframe(pd.DataFrame(functions.accuracy_metrics(lr_pred)))
+        with st.expander('Linear Regression Model'):
+            lr_pred = functions.lr_modeling(model_df)
+            st.write(f"Linear Regression Model with `month`, `year`, `quarter` and `sales from the previous year's the same month` as independent variables.")
+            st.plotly_chart(functions.pred_vs_actual_plot(lr_pred), use_container_width=True)
+            st.write('Accuracy metrics')
+            st.dataframe(pd.DataFrame(functions.accuracy_metrics(lr_pred)))
